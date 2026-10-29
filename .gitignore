@@ -11,3 +11,5 @@ next-env.d.ts
 *.tsbuildinfo
 .DS_Store
 SUBMISSION.md
+HANDOFF.md
+.handoff/

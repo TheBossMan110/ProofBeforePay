@@ -22,6 +22,18 @@ from .email_service import EmailService
 _MODEL_CHECK_TTL = 60.0
 
 
+def mask_email(email: str | None) -> str | None:
+    """maya.chen@gmail.com becomes m•••@gmail.com, so the shared demo admin never sees real addresses."""
+    if not email or "@" not in email:
+        return email
+    local, domain = email.split("@", 1)
+    return f"{local[:1]}•••@{domain}"
+
+
+def mask_name(name: str | None) -> str | None:
+    return f"{name.strip()[:1]}•••" if name and name.strip() else name
+
+
 class AdminService:
     def __init__(
         self,
@@ -120,16 +132,21 @@ class AdminService:
             "recent": runs[:12],
         }
 
-    async def users_table(self) -> list[dict[str, Any]]:
+    async def users_table(self, masked: bool = False) -> list[dict[str, Any]]:
         users = await self.users.all(1000)
         runs = await self.runs.recent(1000)
         counts = Counter(r["user_id"] for r in runs if r.get("user_id"))
+        demo = (self.settings.demo_judge_email, self.settings.demo_admin_email)
+
+        def shown(u: dict[str, Any], value: str | None, mask: Any) -> str | None:
+            return mask(value) if masked and u["email"] not in demo else value
+
         return [
             {
                 "id": u["id"],
-                "name": u.get("name"),
-                "email": u["email"],
-                "role": "admin" if u["email"] in self.settings.admin_emails else u.get("role", "user"),
+                "name": shown(u, u.get("name"), mask_name),
+                "email": shown(u, u["email"], mask_email),
+                "role": "admin" if u["email"] in self.settings.admin_emails or u["email"] == demo[1] else u.get("role", "user"),
                 "verified": bool(u.get("verified_at")),
                 "created_at": epoch(u["created_at"]) if u.get("created_at") else None,
                 "last_login_at": epoch(u["last_login_at"]) if u.get("last_login_at") else None,
@@ -138,11 +155,17 @@ class AdminService:
             for u in users
         ]
 
-    async def feedback_table(self) -> list[dict[str, Any]]:
-        return await self._with_emails(await self.feedback.recent_feedback(500))
+    async def feedback_table(self, masked: bool = False) -> list[dict[str, Any]]:
+        rows = await self._with_emails(await self.feedback.recent_feedback(500))
+        if masked:
+            rows = [{**r, "user_email": mask_email(r["user_email"]), "user_name": mask_name(r["user_name"])} for r in rows]
+        return rows
 
-    async def messages_table(self) -> list[dict[str, Any]]:
-        return [{**m, "created_at": epoch(m["created_at"])} for m in await self.feedback.recent_messages(500)]
+    async def messages_table(self, masked: bool = False) -> list[dict[str, Any]]:
+        rows = [{**m, "created_at": epoch(m["created_at"])} for m in await self.feedback.recent_messages(500)]
+        if masked:
+            rows = [{**m, "email": mask_email(m["email"]), "name": mask_name(m["name"])} for m in rows]
+        return rows
 
     async def _with_emails(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         users = {u["id"]: u for u in await self.users.all(1000)}

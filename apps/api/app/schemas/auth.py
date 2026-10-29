@@ -51,5 +51,9 @@ class ResetRequest(CodeRequest):
     password: str = Field(min_length=8, max_length=128)
 
 
+class DemoRequest(BaseModel):
+    kind: Literal["judge", "admin"] = "judge"
+
+
 class ProfileUpdate(BaseModel):
     name: str = Field(min_length=1, max_length=80)

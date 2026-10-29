@@ -20,4 +20,6 @@ async def health() -> dict[str, Any]:
         "examples": len(rt.store.examples),
         "limits": {"per_ip_per_hour": rt.settings.runs_per_ip_per_hour},
         "accounts": True,
+        # Codes may land in the owner's inbox instead of the person's own (see EMAIL_TEST_INBOX).
+        "email_test_mode": bool(rt.settings.email_test_inbox),
     }

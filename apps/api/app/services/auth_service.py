@@ -33,7 +33,15 @@ class AuthService:
         self.users, self.runs, self.feedback, self.email, self.settings = users, runs, feedback, email, settings
 
     def user(self, row: dict[str, Any]) -> User:
-        return User.from_row(row, self.settings.admin_emails)
+        return User.from_row(row, self.settings.admin_emails, (self.settings.demo_judge_email, self.settings.demo_admin_email))
+
+    def _is_demo_email(self, email: str) -> bool:
+        return email.lower() in (self.settings.demo_judge_email, self.settings.demo_admin_email)
+
+    @staticmethod
+    def _not_demo(user: User) -> None:
+        if user.demo:
+            raise AuthError(403, "This is the shared demo account, so it can't be changed. Create your own account to try this.", "demo")
 
     async def _send_code(self, row: dict[str, Any], purpose: str) -> None:
         latest = await self.users.latest_code(row["id"], purpose)
@@ -103,6 +111,8 @@ class AuthService:
         return self.user(row)
 
     async def forgot(self, email: str) -> None:
+        if self._is_demo_email(email):
+            return  # the demo accounts' passwords can't be reset
         try:
             await self.resend(email, "reset")
         except AuthError as exc:
@@ -110,6 +120,8 @@ class AuthService:
                 raise
 
     async def reset(self, email: str, code: str, password: str) -> User:
+        if self._is_demo_email(email):
+            raise AuthError(403, "The demo account's password can't be changed.", "demo")
         row = await self.users.by_email(email)
         if not row or not row.get("verified_at"):
             raise AuthError(400, "That code isn't valid any more. Ask for a new one.", "no_code")
@@ -141,11 +153,23 @@ class AuthService:
             await self.users.end_session(token_digest(token))
 
     async def rename(self, user: User, name: str) -> User:
+        self._not_demo(user)
         await self.users.update(user.id, name=name)
-        return User(user.id, name, user.email, user.role, user.verified, user.created_at)
+        return User(user.id, name, user.email, user.role, user.verified, user.created_at, user.demo)
+
+    async def demo_user(self, kind: str) -> User:
+        """The shared judge or admin demo account, for the one-click sign-in on the login page."""
+        if not self.settings.demo_login:
+            raise AuthError(404, "Demo sign-in is turned off on this server.", "demo_off")
+        email = self.settings.demo_admin_email if kind == "admin" else self.settings.demo_judge_email
+        row = await self.users.by_email(email)
+        if not row or not row.get("verified_at"):
+            raise AuthError(404, "The demo accounts aren't set up on this server yet.", "demo_missing")
+        return self.user(row)
 
     async def delete_account(self, user: User) -> None:
         """Deletes the account and everything tied to it: sessions, codes, investigations, feedback and messages."""
+        self._not_demo(user)
         await self.runs.delete_for_user(user.id)
         await self.feedback.delete_for_user(user.id)
         await self.users.delete(user.id)

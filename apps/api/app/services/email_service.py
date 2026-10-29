@@ -20,8 +20,21 @@ class EmailError(RuntimeError):
     """Sending failed; the message is safe to show to the user."""
 
 
-def code_email(name: str, code: str, purpose: str, public_url: str) -> tuple[str, str, str]:
+class RecipientNotAllowed(EmailError):
+    """Resend is in test mode (no verified domain) and only delivers to the account owner."""
+
+
+def code_email(name: str, code: str, purpose: str, public_url: str, intended_for: str = "") -> tuple[str, str, str]:
     subject, intro = PURPOSE_COPY[purpose]
+    note, note_text = "", ""
+    if intended_for:
+        subject = f"Code for {intended_for} · {subject}"
+        note_text = f"Test mode: this code is for {intended_for}. Email can't reach that address until a sending domain is verified.\n\n"
+        note = (
+            '<tr><td style="padding:16px 32px 0"><p style="margin:0;padding:10px 14px;border-radius:10px;background:#fdf3dc;'
+            f'font-size:13px;line-height:1.5;color:#6b4d0f">Test mode: this code is for <b>{html.escape(intended_for)}</b>. '
+            "Email can't reach that address until a sending domain is verified.</p></td></tr>"
+        )
     greeting = f"Hi {html.escape(name.split()[0])}," if name.strip() else "Hi,"
     digits = "".join(
         f'<td style="padding:0 4px"><div style="width:44px;height:56px;line-height:56px;border-radius:12px;background:#ffffff;'
@@ -32,14 +45,14 @@ def code_email(name: str, code: str, purpose: str, public_url: str) -> tuple[str
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center">
 <table role="presentation" width="100%" style="max-width:480px;background:#fbfaf6;border:1px solid #e3ddd0;border-radius:20px;overflow:hidden" cellspacing="0" cellpadding="0">
 <tr><td style="height:4px;background:#76b900"></td></tr>
-<tr><td style="padding:32px 32px 8px"><p style="margin:0;font-weight:700;font-size:16px;letter-spacing:-0.01em">ProofBeforePay</p></td></tr>
+<tr><td style="padding:32px 32px 8px"><p style="margin:0;font-weight:700;font-size:16px;letter-spacing:-0.01em">ProofBeforePay</p></td></tr>{note}
 <tr><td style="padding:8px 32px 0"><p style="margin:16px 0 8px;font-size:15px">{greeting}</p>
 <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#4b463b">{intro}</p></td></tr>
 <tr><td align="center" style="padding:0 24px"><table role="presentation" cellspacing="0" cellpadding="0"><tr>{digits}</tr></table></td></tr>
 <tr><td style="padding:24px 32px 32px"><p style="margin:0;font-size:13px;line-height:1.55;color:#7a7466">The code works for 10 minutes. ProofBeforePay will never ask you for this code by phone, chat or email.</p></td></tr>
 <tr><td style="padding:16px 32px;border-top:1px solid #ece6da;font-size:12px;color:#9a9384">Check the offer before it costs you · <a href="{html.escape(public_url)}" style="color:#4a7a00">{html.escape(public_url.split('//')[-1])}</a></td></tr>
 </table></td></tr></table></body></html>"""
-    text = f"{greeting}\n\n{intro}\n\nYour code: {code}\n\nIt works for 10 minutes. We'll never ask you for this code by phone, chat or email."
+    text = f"{note_text}{greeting}\n\n{intro}\n\nYour code: {code}\n\nIt works for 10 minutes. We'll never ask you for this code by phone, chat or email."
     return subject, body, text
 
 
@@ -68,8 +81,12 @@ class EmailService:
         if response.status_code >= 400:
             detail = response.text[:300]
             logger.error("Resend refused the email (%s): %s", response.status_code, detail)
-            if response.status_code == 403 and ("testing emails" in detail or "verify a domain" in detail):
-                raise EmailError("This server can only email its owner until a sending domain is verified in Resend.")
+            # 403: the sender's domain isn't verified, or (with onboarding@resend.dev) the address isn't the account owner's.
+            if response.status_code == 403 and any(w in detail.lower() for w in ("testing emails", "verify", "not verified")):
+                raise RecipientNotAllowed(
+                    "We can't email that address yet: this server's sending domain isn't verified in Resend. "
+                    "Ask the site owner, or use the address the Resend account was created with."
+                )
             raise EmailError("We couldn't send the email. Please try again in a minute.")
 
     async def send_code(self, to: str, name: str, code: str, purpose: str) -> None:
@@ -78,7 +95,15 @@ class EmailService:
             logger.warning("RESEND_API_KEY isn't set. %s code for %s: %s", purpose.capitalize(), to, code)
             return
         subject, body, text = code_email(name, code, purpose, self.settings.public_url)
-        await self.send([to], subject, body, text)
+        try:
+            await self.send([to], subject, body, text)
+        except RecipientNotAllowed:
+            inbox = self.settings.email_test_inbox
+            if not inbox or inbox == to.lower():
+                raise
+            # Test mode: the code goes to the owner's inbox, labelled with the address it's for.
+            subject, body, text = code_email(name, code, purpose, self.settings.public_url, intended_for=to)
+            await self.send([inbox], subject, body, text)
 
     async def notify_admins(self, subject: str, text: str) -> None:
         """Best effort: a failed notice never fails the request that triggered it."""

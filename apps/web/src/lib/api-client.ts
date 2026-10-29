@@ -8,6 +8,7 @@ import type {
   InvestigationDetail,
   InvestigationSummary,
   OfferInput,
+  PublicStats,
   User,
 } from "@/types";
 
@@ -62,6 +63,9 @@ export const api = {
   get: (id: string) => request<InvestigationDetail>(`/investigations/${encodeURIComponent(id)}`),
   create: (input: OfferInput) => post<{ id: string }>("/investigations", input),
   feedback: (body: { investigation_id?: string; rating: number; comment?: string }) => post<{ status: string }>("/feedback", body),
+  ask: (id: string, question: string) => post<{ answer: string }>(`/investigations/${encodeURIComponent(id)}/ask`, { question }),
+  transcribe: (image: string) => post<{ text: string; model: string }>("/transcribe", { image }),
+  stats: () => request<PublicStats>("/stats"),
   contact: (body: { name: string; email: string; topic: ContactTopic; message: string }) => post<{ status: string }>("/contact", body),
 };
 
@@ -71,6 +75,7 @@ export const auth = {
   verify: (body: { email: string; code: string }) => post<{ user: User }>("/auth/verify", body),
   resend: (body: { email: string; purpose: "verify" | "reset" }) => post<{ status: string }>("/auth/resend", body),
   login: (body: { email: string; password: string }) => post<{ user: User }>("/auth/login", body),
+  demo: (kind: "judge" | "admin") => post<{ user: User }>("/auth/demo", { kind }),
   forgot: (body: { email: string }) => post<{ status: string }>("/auth/forgot", body),
   reset: (body: { email: string; code: string; password: string }) => post<{ user: User }>("/auth/reset", body),
   logout: () => post<{ status: string }>("/auth/logout"),

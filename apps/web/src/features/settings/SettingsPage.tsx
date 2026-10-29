@@ -73,10 +73,11 @@ export function SettingsPage() {
                 </p>
               </div>
             </div>
-            <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+            <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" disabled={user.demo} />
+            {user.demo && <p className="text-sm text-bone-500">This is the shared demo account, so its name and password can&apos;t be changed and it can&apos;t be deleted.</p>}
             <FormAlert message={error} />
             <FormAlert message={saved} tone="success" />
-            <Button type="submit" variant="primary" disabled={saving || name.trim() === user.name}>
+            <Button type="submit" variant="primary" disabled={user.demo || saving || name.trim() === user.name}>
               {saving && <Spinner className="size-4" />} Save changes
             </Button>
           </form>
@@ -118,6 +119,7 @@ export function SettingsPage() {
             </p>
             <div className="flex flex-wrap gap-2">
               <input
+                disabled={user.demo}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 placeholder="delete"

@@ -102,6 +102,13 @@ class Settings:
     email_from: str
     admin_emails: frozenset[str]
     public_url: str
+    demo_judge_email: str
+    vision_models: tuple[str, ...]
+    price_vision_in: float
+    price_vision_out: float
+    demo_admin_email: str
+    demo_login: bool
+    email_test_inbox: str
 
     @property
     def email_configured(self) -> bool:
@@ -175,6 +182,19 @@ def load_settings() -> Settings:
         email_from=_env("EMAIL_FROM", "ProofBeforePay <onboarding@resend.dev>"),
         admin_emails=frozenset(e.strip().lower() for e in _env("ADMIN_EMAILS").split(",") if e.strip()),
         public_url=_env("PUBLIC_URL", "http://localhost:3000").rstrip("/"),
+        # Shared demo accounts for judges, signed in with one click from the login page. They can't be renamed,
+        # deleted or reset, and the demo admin sees the admin dashboard with people's names and emails masked.
+        # example.com is reserved, so nobody can own these addresses. Create them with scripts/seed_demo_accounts.py.
+        demo_judge_email=_env("DEMO_JUDGE_EMAIL", "demo.judge@example.com").lower(),
+        # Reads text out of uploaded screenshots (Nemotron does all the reasoning). The first one that answers is used.
+        vision_models=tuple(m.strip() for m in _env("MODEL_VISION", "openbmb/MiniCPM-V-4_5,google/gemma-3-27b-it").split(",") if m.strip()),
+        price_vision_in=_float("PRICE_VISION_IN", 0.20),
+        price_vision_out=_float("PRICE_VISION_OUT", 0.60),
+        demo_admin_email=_env("DEMO_ADMIN_EMAIL", "demo.admin@example.com").lower(),
+        # Until a sending domain is verified, Resend only delivers to the account owner. With this set, a code Resend
+        # won't deliver goes to this inbox instead, labelled with who it's for. Leave empty once a domain is verified.
+        email_test_inbox=_env("EMAIL_TEST_INBOX").lower(),
+        demo_login=_env("DEMO_LOGIN", "on").lower() not in ("off", "false", "0"),
     )
 
 

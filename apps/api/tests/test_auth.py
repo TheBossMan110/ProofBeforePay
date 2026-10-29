@@ -112,3 +112,46 @@ def test_deleting_an_account_removes_its_data(client: TestClient, rt: Any) -> No
     assert rt.db.dump("users") == [] and rt.db.dump("sessions") == []
     assert rt.db.dump("investigations") == [] and rt.db.dump("feedback") == []
     assert client.get("/api/v1/auth/me").json()["user"] is None
+
+
+async def _make_demo_accounts(rt: Any) -> None:
+    from app.core.security import hash_password
+    from app.repositories.user_repo import now
+
+    for email, name in ((rt.settings.demo_judge_email, "Demo Judge"), (rt.settings.demo_admin_email, "Demo Admin")):
+        row = await rt.users.create(name, email, hash_password("demo-password"))
+        await rt.users.update(row["id"], verified_at=now().isoformat())
+
+
+def test_demo_judge_signs_in_with_one_click_and_is_protected(client: TestClient, rt: Any) -> None:
+    import asyncio
+
+    asyncio.run(_make_demo_accounts(rt))
+    user = client.post("/api/v1/auth/demo", json={"kind": "judge"}).json()["user"]
+    assert user["demo"] and user["role"] == "user"
+    assert client.get("/api/v1/admin/overview").status_code == 403
+    assert client.patch("/api/v1/me", json={"name": "Hacked"}).status_code == 403
+    assert client.delete("/api/v1/me").status_code == 403
+    assert client.post("/api/v1/auth/reset", json={"email": rt.settings.demo_judge_email, "code": "123456", "password": "new password 1"}).status_code == 403
+    assert client.get("/api/v1/auth/me").json()["user"]["name"] == "Demo Judge"
+
+
+def test_demo_admin_sees_the_dashboard_with_people_masked(client: TestClient, rt: Any) -> None:
+    import asyncio
+
+    signup(client, rt)  # a real person: maya@example.com
+    client.post("/api/v1/contact", json={"name": "Maya Chen", "email": "maya@example.com", "topic": "question", "message": "Is this thing free?"})
+    asyncio.run(_make_demo_accounts(rt))
+    demo = TestClient(client.app)
+    assert demo.post("/api/v1/auth/demo", json={"kind": "admin"}).json()["user"]["role"] == "admin"
+    assert demo.get("/api/v1/admin/overview").status_code == 200
+    emails = {u["email"] for u in demo.get("/api/v1/admin/users").json()}
+    assert "maya@example.com" not in emails and "m•••@example.com" in emails
+    assert rt.settings.demo_admin_email in emails  # the demo accounts themselves stay readable
+    message = demo.get("/api/v1/admin/messages").json()[0]
+    assert message["email"] == "m•••@example.com" and message["name"] == "M•••"
+
+
+def test_demo_sign_in_needs_the_accounts_to_exist(client: TestClient) -> None:
+    response = client.post("/api/v1/auth/demo", json={"kind": "judge"})
+    assert response.status_code == 404 and response.json()["detail"]["code"] == "demo_missing"

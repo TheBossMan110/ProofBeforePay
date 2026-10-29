@@ -7,6 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api-client";
 import { clock } from "@/lib/formatters";
 import { getLenis } from "@/lib/scroll";
+import { STAGES } from "@/lib/stages";
+import { DECISION_LABEL } from "@/features/decision-brief/markdown";
 import type { InvestigationDetail, OfferInput } from "@/types";
 import { useInvestigationStream, type LiveState } from "@/features/investigations/useInvestigationStream";
 import { ChallengePanel, LinksPanel } from "@/components/risk/Challenge";
@@ -52,6 +54,17 @@ export function InvestigationView() {
 
   const live = useInvestigationStream(id, mode, session);
 
+  // The browser tab follows the check, so people can switch away and see when it's done.
+  const shown = mode ? live.report : detail?.report;
+  let tabTitle: string | null = null;
+  if (shown) tabTitle = `${DECISION_LABEL[shown.judgement.decision]} · ${shown.entities.company || "Offer"} · ProofBeforePay`;
+  else if (mode && detail) {
+    const done = STAGES.filter((s) => live.stages[s.key].state === "done").length;
+    const active = STAGES.find((s) => live.stages[s.key].state === "active");
+    tabTitle = `(${done}/${STAGES.length}) ${active ? active.title : "Starting"}… · ProofBeforePay`;
+  }
+  useTabTitle(tabTitle);
+
   if (!id) return <Shell><Problem title="No investigation selected" message="Start a new check, or open one of the recorded investigations." /></Shell>;
   if (loadError) return <Shell><Problem title="Investigation not found" message={loadError} /></Shell>;
   if (!detail) return <Shell><PageSkeleton /></Shell>;
@@ -89,6 +102,20 @@ export function InvestigationView() {
     <Shell>
       <LiveBoard state={live} mode={mode} input={detail.input} onSkip={detail.report ? () => setMode(null) : undefined} />
     </Shell>
+  );
+}
+
+function useTabTitle(title: string | null) {
+  const original = useRef<string | null>(null);
+  useEffect(() => {
+    if (original.current === null) original.current = document.title;
+    if (title) document.title = title;
+  }, [title]);
+  useEffect(
+    () => () => {
+      if (original.current !== null) document.title = original.current;
+    },
+    [],
   );
 }
 

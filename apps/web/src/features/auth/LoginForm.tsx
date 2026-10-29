@@ -8,6 +8,7 @@ import { FormAlert, PasswordField, TextField } from "@/components/ui/form";
 import { ApiError, auth } from "@/lib/api-client";
 import { check, loginSchema, type FieldErrors } from "@/lib/schemas";
 import { setUser } from "@/stores/session";
+import { DemoAccess } from "./DemoAccess";
 import { AuthHeading, safeNext, stagger, SubmitButton } from "./shared";
 
 export function LoginForm() {
@@ -82,6 +83,7 @@ export function LoginForm() {
           Create an account
         </Link>
       </motion.p>
+      <DemoAccess next={next} />
     </>
   );
 }

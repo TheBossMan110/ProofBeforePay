@@ -20,6 +20,7 @@ export interface Health {
   examples: number;
   limits: { per_ip_per_hour: number };
   accounts?: boolean;
+  email_test_mode?: boolean;
 }
 
 export interface LlmCall {
@@ -222,6 +223,15 @@ export interface InvestigationSummary {
   savings_pct?: number | null;
 }
 
+/** Anonymous numbers for the home page. */
+export interface PublicStats {
+  checks: number;
+  avg_seconds: number;
+  avg_cost_usd: number;
+  avg_savings_pct: number;
+  by_decision: Partial<Record<Decision, number>>;
+}
+
 // ── Accounts and admin ──────────────────────────────────────────────────────
 
 export interface User {
@@ -231,6 +241,8 @@ export interface User {
   role: "user" | "admin";
   verified: boolean;
   created_at: string | null;
+  /** One of the shared demo accounts judges sign in to; it can't be changed. */
+  demo?: boolean;
 }
 
 export type HealthState = "ok" | "degraded" | "down" | "off";

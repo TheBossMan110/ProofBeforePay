@@ -18,8 +18,8 @@ async def overview() -> dict[str, Any]:
 
 
 @router.get("/users")
-async def users() -> list[dict[str, Any]]:
-    return await runtime.current.admin.users_table()
+async def users(viewer: User = Depends(require_admin)) -> list[dict[str, Any]]:
+    return await runtime.current.admin.users_table(masked=viewer.sees_masked_data)
 
 
 @router.get("/investigations")
@@ -28,13 +28,13 @@ async def investigations() -> list[dict[str, Any]]:
 
 
 @router.get("/feedback")
-async def feedback() -> list[dict[str, Any]]:
-    return await runtime.current.admin.feedback_table()
+async def feedback(viewer: User = Depends(require_admin)) -> list[dict[str, Any]]:
+    return await runtime.current.admin.feedback_table(masked=viewer.sees_masked_data)
 
 
 @router.get("/messages")
-async def messages() -> list[dict[str, Any]]:
-    return await runtime.current.admin.messages_table()
+async def messages(viewer: User = Depends(require_admin)) -> list[dict[str, Any]]:
+    return await runtime.current.admin.messages_table(masked=viewer.sees_masked_data)
 
 
 @router.get("/whoami")

@@ -7,6 +7,7 @@ import { useState, type FormEvent } from "react";
 import { FormAlert, PasswordField, TextField } from "@/components/ui/form";
 import { ApiError, auth } from "@/lib/api-client";
 import { check, signupSchema, type FieldErrors } from "@/lib/schemas";
+import { DemoAccess } from "./DemoAccess";
 import { AuthHeading, safeNext, stagger, SubmitButton } from "./shared";
 
 export function SignupForm() {
@@ -84,6 +85,7 @@ export function SignupForm() {
           Sign in
         </Link>
       </motion.p>
+      <DemoAccess next={next} />
     </>
   );
 }

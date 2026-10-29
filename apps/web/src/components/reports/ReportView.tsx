@@ -10,6 +10,7 @@ import {
   MessageSquareQuote,
   MessagesSquare,
   Play,
+  Printer,
   Scale,
   Swords,
 } from "lucide-react";
@@ -25,6 +26,7 @@ import { DecisionHero } from "@/components/risk/DecisionHero";
 import { SourceList } from "@/components/evidence/Feeds";
 import { RoutingPanel } from "@/components/investigation/RoutingPanel";
 import { AgentTrace } from "@/components/reports/AgentTrace";
+import { AskReport } from "@/components/reports/AskReport";
 import { FeedbackWidget } from "@/components/reports/FeedbackWidget";
 import { Button, Card, CardHeader, CopyButton, cx, POLARITY_STYLE, RefText, SectionLabel } from "@/components/ui";
 
@@ -207,7 +209,7 @@ export function ReportView({ report, runId, onReplay }: { report: Report; runId:
     <div className="space-y-6">
       <DecisionHero report={report} />
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div data-print-hide className="flex flex-wrap items-center gap-2">
         <CopyButton text={link} label="Copy link" className="py-2" />
         <Button
           variant="secondary"
@@ -216,6 +218,10 @@ export function ReportView({ report, runId, onReplay }: { report: Report; runId:
         >
           <Download className="size-3.5" aria-hidden />
           Download report
+        </Button>
+        <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => window.print()}>
+          <Printer className="size-3.5" aria-hidden />
+          Save as PDF
         </Button>
         {onReplay && (
           <Button variant="secondary" className="px-3 py-1.5 text-xs" onClick={onReplay}>
@@ -231,18 +237,25 @@ export function ReportView({ report, runId, onReplay }: { report: Report; runId:
 
       <ProofTrail report={report} />
 
-      <AgentTrace runId={runId} />
+      <div data-print-hide>
+        <AgentTrace runId={runId} />
+      </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-12">
         <Reveal className="min-w-0 space-y-6 lg:col-span-8" selector=":scope > *" stagger={0.1} y={28}>
           <ActionPlan report={report} />
           {report.challenge && <ChallengePanel challenge={report.challenge} decision={report.judgement.decision} />}
+          <div data-print-hide>
+            <AskReport runId={runId} decision={report.judgement.decision} />
+          </div>
           <SafeReply report={report} />
           <SignalList signals={report.signals} sorted />
           <ClaimBoard claims={report.claims} />
           <Assessment report={report} />
           <OriginalMessage report={report} />
-          <FeedbackWidget runId={runId} />
+          <div data-print-hide>
+            <FeedbackWidget runId={runId} />
+          </div>
         </Reveal>
         <Reveal as="div" className="min-w-0 space-y-6 lg:col-span-4" selector=":scope > *" stagger={0.1} y={28} delay={0.15}>
           <RoutingPanel calls={t.calls} tavily={{ calls: t.tavily.calls, credits: t.tavily.credits, byKind: t.tavily.by_kind }} />

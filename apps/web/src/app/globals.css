@@ -405,3 +405,29 @@ body::after {
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
 }
+
+/* Save as PDF: print the report as it looks on screen, without the app chrome or anything still mid-animation. */
+@media print {
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  header,
+  nav,
+  aside,
+  footer,
+  [data-print-hide],
+  body::after {
+    display: none !important;
+  }
+  * {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    filter: none !important;
+    animation: none !important;
+  }
+  .panel {
+    break-inside: avoid;
+  }
+}

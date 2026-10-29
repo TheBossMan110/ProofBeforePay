@@ -329,6 +329,131 @@
         }
       }
     },
+    "/api/v1/investigations/{run_id}/ask": {
+      "post": {
+        "tags": [
+          "assist"
+        ],
+        "summary": "Ask",
+        "description": "Answers from the report's own evidence, with citations. Nemotron Super, about a tenth of a cent a question.",
+        "operationId": "ask_api_v1_investigations__run_id__ask_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Ask Api V1 Investigations  Run Id  Ask Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transcribe": {
+      "post": {
+        "tags": [
+          "assist"
+        ],
+        "summary": "Transcribe",
+        "operationId": "transcribe_api_v1_transcribe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranscribeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Transcribe Api V1 Transcribe Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats": {
+      "get": {
+        "tags": [
+          "assist"
+        ],
+        "summary": "Stats",
+        "operationId": "stats_api_v1_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Stats Api V1 Stats Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/signup": {
       "post": {
         "tags": [
@@ -488,6 +613,50 @@
                   "additionalProperties": true,
                   "type": "object",
                   "title": "Response Login Api V1 Auth Login Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/demo": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Demo",
+        "description": "One-click sign-in to a shared demo account, so judges can try the signed-in app without an email code.",
+        "operationId": "demo_api_v1_auth_demo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Demo Api V1 Auth Demo Post"
                 }
               }
             }
@@ -976,6 +1145,21 @@
   },
   "components": {
     "schemas": {
+      "AskRequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Question"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "AskRequest"
+      },
       "CodeRequest": {
         "properties": {
           "email": {
@@ -1034,6 +1218,21 @@
           "message"
         ],
         "title": "ContactRequest"
+      },
+      "DemoRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "judge",
+              "admin"
+            ],
+            "title": "Kind",
+            "default": "judge"
+          }
+        },
+        "type": "object",
+        "title": "DemoRequest"
       },
       "EmailBody": {
         "properties": {
@@ -1230,6 +1429,21 @@
           "password"
         ],
         "title": "SignupRequest"
+      },
+      "TranscribeRequest": {
+        "properties": {
+          "image": {
+            "type": "string",
+            "maxLength": 7500000,
+            "minLength": 32,
+            "title": "Image"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image"
+        ],
+        "title": "TranscribeRequest"
       },
       "ValidationError": {
         "properties": {

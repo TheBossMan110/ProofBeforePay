@@ -8,6 +8,7 @@ import {
   Coins,
   Cpu,
   Database,
+  Download,
   Globe,
   Inbox,
   Mail,
@@ -24,11 +25,13 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSession } from "@/stores/session";
 import { VerdictBars } from "@/components/risk/VerdictBars";
 import { Button, Card, CardHeader, cx, DecisionBadge, Skeleton, Spinner, TierBadge } from "@/components/ui";
 import { EmptyState, PageHeader, StatTile } from "@/components/ui/page";
 import { useApi } from "@/hooks/useApi";
 import { admin } from "@/lib/api-client";
+import { downloadCsv, isoTime } from "@/lib/csv";
 import { ago, duration, shortDate, usd } from "@/lib/formatters";
 import type { AdminOverview, HealthState, ServiceHealth } from "@/types";
 
@@ -43,11 +46,17 @@ type Tab = (typeof TABS)[number]["key"];
 
 export function AdminPage() {
   const [tab, setTab] = useState<Tab>("overview");
+  const { user } = useSession();
   return (
     <div>
       <PageHeader eyebrow="Admin" title="System and usage">
         Whether every part of ProofBeforePay is up, how it&apos;s being used, and what people are saying.
       </PageHeader>
+      {user?.demo && (
+        <p className="-mt-4 mb-6 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-sm text-bone-300">
+          <span className="font-semibold text-bone-100">Demo admin view.</span> Everything here is live, but people&apos;s names and email addresses are masked.
+        </p>
+      )}
       <div className="scroll-slim -mx-1 mb-6 flex gap-1 overflow-x-auto px-1" role="tablist">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
@@ -79,12 +88,20 @@ export function AdminPage() {
 
 const STATUS: Record<HealthState, { dot: string; text: string; label: string }> = {
   ok: { dot: "bg-brand-400", text: "text-brand-300", label: "Operational" },
-  degraded: { dot: "bg-caution-400", text: "text-caution-300", label: "Degraded" },
+  degraded: {
+    dot: "bg-caution-400",
+    text: "text-caution-300",
+    label: "Degraded",
+  },
   down: { dot: "bg-stop-400", text: "text-stop-300", label: "Down" },
   off: { dot: "bg-bone-600", text: "text-bone-400", label: "Not configured" },
 };
 
-const SERVICES: { key: keyof AdminOverview["health"]; name: string; icon: LucideIcon }[] = [
+const SERVICES: {
+  key: keyof AdminOverview["health"];
+  name: string;
+  icon: LucideIcon;
+}[] = [
   { key: "api", name: "API server", icon: Server },
   { key: "token_factory", name: "Nebius Token Factory", icon: Cpu },
   { key: "tavily", name: "Tavily", icon: Globe },
@@ -126,18 +143,31 @@ function PerDay({ days }: { days: AdminOverview["stats"]["per_day"] }) {
               className={cx("w-full rounded-t-[4px] transition-colors", hover === i ? "bg-brand-300" : "bg-brand-500/80")}
               initial={{ height: 0 }}
               animate={{ height: `${Math.max(4, (d.count / max) * 100)}%` }}
-              transition={{ delay: 0.03 * i, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              transition={{
+                delay: 0.03 * i,
+                duration: 0.7,
+                ease: [0.16, 1, 0.3, 1],
+              }}
             />
             {hover === i && (
               <span className="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 rounded-lg border border-white/[0.1] bg-ink-850 px-2.5 py-1 font-mono text-[11px] whitespace-nowrap text-bone-100 shadow-lg">
-                {d.count} · {new Date(`${d.day}T00:00:00Z`).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                {d.count} ·{" "}
+                {new Date(`${d.day}T00:00:00Z`).toLocaleDateString(undefined, {
+                  day: "numeric",
+                  month: "short",
+                })}
               </span>
             )}
           </div>
         ))}
       </div>
       <div className="mt-2 flex justify-between border-t border-white/[0.06] pt-2 font-mono text-[10.5px] text-bone-500">
-        <span>{new Date(`${days[0]!.day}T00:00:00Z`).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
+        <span>
+          {new Date(`${days[0]!.day}T00:00:00Z`).toLocaleDateString(undefined, {
+            day: "numeric",
+            month: "short",
+          })}
+        </span>
         <span>{new Date(`${days[days.length - 1]!.day}T00:00:00Z`).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
       </div>
       <table className="sr-only">
@@ -193,7 +223,12 @@ function Overview() {
             <p className="text-sm text-bone-400">{Math.round(spentShare * 100)}% used</p>
           </div>
           <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-white/[0.05]" role="img" aria-label={`${usd(budget.spent_usd)} spent of ${usd(budget.cap_usd)}`}>
-            <motion.div className={cx("h-full", spentShare > 0.8 ? "bg-stop-400" : spentShare > 0.6 ? "bg-caution-400" : "bg-brand-400")} initial={{ width: 0 }} animate={{ width: `${spentShare * 100}%` }} transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }} />
+            <motion.div
+              className={cx("h-full", spentShare > 0.8 ? "bg-stop-400" : spentShare > 0.6 ? "bg-caution-400" : "bg-brand-400")}
+              initial={{ width: 0 }}
+              animate={{ width: `${spentShare * 100}%` }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            />
             {reservedShare > 0 && <motion.div className="h-full bg-sand-300/50" initial={{ width: 0 }} animate={{ width: `${reservedShare * 100}%` }} title="Held back for checks in progress" />}
           </div>
           <p className="mt-2 text-xs text-bone-500">{budget.reserved_usd > 0 ? `${usd(budget.reserved_usd)} held back for checks in progress.` : "No checks in progress."}</p>
@@ -227,7 +262,14 @@ function Overview() {
               <div className="flex flex-wrap gap-2 text-xs">
                 {(["holds", "weakened", "overturned"] as const).map((k) => (
                   <span key={k} className="rounded-full bg-white/[0.04] px-2.5 py-1 text-bone-300 ring-1 ring-white/[0.07] ring-inset">
-                    {{ holds: "Held up", weakened: "Weakened", overturned: "Changed" }[k]} · <span className="font-mono text-bone-100">{stats.challenge_outcomes[k] ?? 0}</span>
+                    {
+                      {
+                        holds: "Held up",
+                        weakened: "Weakened",
+                        overturned: "Changed",
+                      }[k]
+                    }{" "}
+                    · <span className="font-mono text-bone-100">{stats.challenge_outcomes[k] ?? 0}</span>
                   </span>
                 ))}
               </div>
@@ -261,13 +303,20 @@ function Overview() {
 }
 
 function RunList({ runs }: { runs: AdminOverview["recent"] }) {
-  if (!runs.length) return <div className="p-5"><EmptyState icon={ScanSearch} title="No investigations yet" /></div>;
+  if (!runs.length)
+    return (
+      <div className="p-5">
+        <EmptyState icon={ScanSearch} title="No investigations yet" />
+      </div>
+    );
   return (
     <ul className="divide-y divide-white/[0.05]">
       {runs.map((r) => (
         <li key={r.id}>
           <Link href={`/investigations?id=${encodeURIComponent(r.id)}`} className="group flex items-center gap-4 px-5 py-3 transition hover:bg-white/[0.02]">
-            <span className="w-28 shrink-0">{r.decision ? <DecisionBadge decision={r.decision} /> : <span className={cx("text-xs", r.status === "error" ? "text-stop-300" : "text-bone-400")}>{r.status === "error" ? "Didn't finish" : "Running"}</span>}</span>
+            <span className="w-28 shrink-0">
+              {r.decision ? <DecisionBadge decision={r.decision} /> : <span className={cx("text-xs", r.status === "error" ? "text-stop-300" : "text-bone-400")}>{r.status === "error" ? "Didn't finish" : "Running"}</span>}
+            </span>
             <span className="min-w-0 flex-1 truncate text-sm text-bone-200">{[r.role, r.company].filter(Boolean).join(" at ") || r.headline || r.id}</span>
             <span className="hidden font-mono text-[11px] text-bone-500 sm:block">{r.cost_usd ? usd(r.cost_usd) : ""}</span>
             <span className="font-mono text-[11px] text-bone-500">{ago(r.created_at)}</span>
@@ -276,6 +325,15 @@ function RunList({ runs }: { runs: AdminOverview["recent"] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function CsvButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button variant="secondary" className="shrink-0 px-3 py-1.5 text-xs" onClick={onClick}>
+      <Download className="size-3.5" aria-hidden />
+      Download CSV
+    </Button>
   );
 }
 
@@ -290,19 +348,37 @@ function UsersTab() {
         <p className="text-sm text-bone-400">
           <span className="font-semibold text-bone-50">{data.length}</span> accounts · {data.filter((u) => u.verified).length} verified
         </p>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search name or email"
-          className="h-9 w-full rounded-xl border border-white/[0.08] bg-ink-900 px-3 text-sm text-bone-50 placeholder:text-bone-600 focus:border-brand-500/60 focus:outline-none sm:w-64"
-        />
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search name or email"
+            aria-label="Search name or email"
+            className="h-9 w-full rounded-xl border border-white/[0.08] bg-ink-900 px-3 text-sm text-bone-50 placeholder:text-bone-600 focus:border-brand-500/60 focus:outline-none sm:w-64"
+          />
+          <CsvButton
+            onClick={() =>
+              downloadCsv("users", shown, [
+                ["Name", (u) => u.name],
+                ["Email", (u) => u.email],
+                ["Role", (u) => u.role],
+                ["Verified", (u) => (u.verified ? "yes" : "no")],
+                ["Joined", (u) => isoTime(u.created_at)],
+                ["Last sign-in", (u) => isoTime(u.last_login_at)],
+                ["Checks", (u) => u.investigations],
+              ])
+            }
+          />
+        </div>
       </div>
       <div className="scroll-slim overflow-x-auto">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="font-mono text-[10.5px] tracking-[0.12em] text-bone-500 uppercase">
             <tr className="border-b border-white/[0.06]">
               {["Name", "Email", "Role", "Verified", "Joined", "Last sign-in", "Checks"].map((h) => (
-                <th key={h} className="px-5 py-3 font-medium">{h}</th>
+                <th key={h} className="px-5 py-3 font-medium">
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -311,7 +387,9 @@ function UsersTab() {
               <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(i, 15) * 0.02 }} className="border-b border-white/[0.04] hover:bg-white/[0.015]">
                 <td className="px-5 py-3 font-medium text-bone-100">{u.name || "—"}</td>
                 <td className="px-5 py-3 text-bone-300">{u.email}</td>
-                <td className="px-5 py-3">{u.role === "admin" ? <span className="rounded-full bg-brand-500/10 px-2 py-0.5 text-xs text-brand-300 ring-1 ring-brand-500/25 ring-inset">Admin</span> : <span className="text-bone-500">User</span>}</td>
+                <td className="px-5 py-3">
+                  {u.role === "admin" ? <span className="rounded-full bg-brand-500/10 px-2 py-0.5 text-xs text-brand-300 ring-1 ring-brand-500/25 ring-inset">Admin</span> : <span className="text-bone-500">User</span>}
+                </td>
                 <td className="px-5 py-3">{u.verified ? <BadgeCheck className="size-4 text-brand-300" aria-label="Verified" /> : <span className="text-xs text-caution-300">Pending</span>}</td>
                 <td className="px-5 py-3 text-bone-400">{u.created_at ? shortDate(u.created_at) : "—"}</td>
                 <td className="px-5 py-3 text-bone-400">{u.last_login_at ? ago(u.last_login_at) : "—"}</td>
@@ -331,13 +409,37 @@ function InvestigationsTab() {
   if (!data) return loading ? <Skeleton className="h-96 rounded-2xl" /> : <p className="text-sm text-stop-300">{error}</p>;
   return (
     <Card className="overflow-hidden">
-      <CardHeader icon={<ScanSearch className="size-4" />} title={`${data.length} investigations`} subtitle="Newest first, signed-in and anonymous" />
+      <CardHeader
+        icon={<ScanSearch className="size-4" />}
+        title={`${data.length} investigations`}
+        subtitle="Newest first, signed-in and anonymous"
+        right={
+          <CsvButton
+            onClick={() =>
+              downloadCsv("investigations", data, [
+                ["ID", (r) => r.id],
+                ["When", (r) => isoTime(r.created_at)],
+                ["Status", (r) => r.status],
+                ["Verdict", (r) => r.decision],
+                ["Company", (r) => r.company],
+                ["Role", (r) => r.role],
+                ["Challenge", (r) => r.challenge_outcome],
+                ["Seconds", (r) => r.duration_s],
+                ["Cost (USD)", (r) => r.cost_usd],
+                ["Owner", (r) => ((r as { user_id?: string | null }).user_id ? "Account" : "Anonymous")],
+              ])
+            }
+          />
+        }
+      />
       <div className="scroll-slim overflow-x-auto">
         <table className="w-full min-w-[820px] text-left text-sm">
           <thead className="font-mono text-[10.5px] tracking-[0.12em] text-bone-500 uppercase">
             <tr className="border-b border-white/[0.06]">
               {["When", "Verdict", "Offer", "Challenge", "Time", "Cost", "Owner"].map((h) => (
-                <th key={h} className="px-5 py-3 font-medium">{h}</th>
+                <th key={h} className="px-5 py-3 font-medium">
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -359,7 +461,11 @@ function InvestigationsTab() {
             ))}
           </tbody>
         </table>
-        {!data.length && <div className="p-5"><EmptyState icon={ScanSearch} title="No investigations yet" /></div>}
+        {!data.length && (
+          <div className="p-5">
+            <EmptyState icon={ScanSearch} title="No investigations yet" />
+          </div>
+        )}
       </div>
     </Card>
   );
@@ -368,30 +474,54 @@ function InvestigationsTab() {
 function FeedbackTab() {
   const { data, loading, error } = useApi(() => admin.feedback(), []);
   if (!data) return loading ? <Skeleton className="h-96 rounded-2xl" /> : <p className="text-sm text-stop-300">{error}</p>;
-  if (!data.length) return <EmptyState icon={MessageSquareHeart} title="No feedback yet">Ratings from the bottom of every report show up here.</EmptyState>;
+  if (!data.length)
+    return (
+      <EmptyState icon={MessageSquareHeart} title="No feedback yet">
+        Ratings from the bottom of every report show up here.
+      </EmptyState>
+    );
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      {data.map((f, i) => (
-        <motion.div key={f.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 12) * 0.04 }} className="panel p-5">
-          <div className="flex items-center justify-between gap-3">
-            <span className="flex gap-0.5" aria-label={`${f.rating} out of 5`}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Star key={n} className={cx("size-4", n <= f.rating ? "fill-sand-300 text-sand-300" : "text-bone-700")} aria-hidden />
-              ))}
-            </span>
-            <span className="text-xs text-bone-500">{ago(f.created_at)}</span>
-          </div>
-          <p className="mt-3 text-sm leading-relaxed text-bone-200">{f.comment || <span className="text-bone-500">No comment.</span>}</p>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-bone-500">
-            <span>{f.user_email ? `${f.user_name ?? ""} · ${f.user_email}` : "Anonymous"}</span>
-            {f.investigation_id && (
-              <Link href={`/investigations?id=${encodeURIComponent(f.investigation_id)}`} className="inline-flex items-center gap-1 text-bone-400 hover:text-bone-50">
-                Report <ArrowUpRight className="size-3" aria-hidden />
-              </Link>
-            )}
-          </div>
-        </motion.div>
-      ))}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-bone-400">
+          <span className="font-semibold text-bone-50">{data.length}</span> ratings · average {(data.reduce((sum, f) => sum + f.rating, 0) / data.length).toFixed(1)} of 5
+        </p>
+        <CsvButton
+          onClick={() =>
+            downloadCsv("feedback", data, [
+              ["When", (f) => isoTime(f.created_at)],
+              ["Rating", (f) => f.rating],
+              ["Comment", (f) => f.comment],
+              ["Name", (f) => f.user_name],
+              ["Email", (f) => f.user_email],
+              ["Investigation", (f) => f.investigation_id],
+            ])
+          }
+        />
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        {data.map((f, i) => (
+          <motion.div key={f.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 12) * 0.04 }} className="panel p-5">
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex gap-0.5" aria-label={`${f.rating} out of 5`}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Star key={n} className={cx("size-4", n <= f.rating ? "fill-sand-300 text-sand-300" : "text-bone-700")} aria-hidden />
+                ))}
+              </span>
+              <span className="text-xs text-bone-500">{ago(f.created_at)}</span>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-bone-200">{f.comment || <span className="text-bone-500">No comment.</span>}</p>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-bone-500">
+              <span>{f.user_email ? `${f.user_name ?? ""} · ${f.user_email}` : "Anonymous"}</span>
+              {f.investigation_id && (
+                <Link href={`/investigations?id=${encodeURIComponent(f.investigation_id)}`} className="inline-flex items-center gap-1 text-bone-400 hover:text-bone-50">
+                  Report <ArrowUpRight className="size-3" aria-hidden />
+                </Link>
+              )}
+            </div>
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -399,9 +529,30 @@ function FeedbackTab() {
 function MessagesTab() {
   const { data, loading, error } = useApi(() => admin.messages(), []);
   if (!data) return loading ? <Skeleton className="h-96 rounded-2xl" /> : <p className="text-sm text-stop-300">{error}</p>;
-  if (!data.length) return <EmptyState icon={Inbox} title="No messages yet">Messages from the contact page show up here.</EmptyState>;
+  if (!data.length)
+    return (
+      <EmptyState icon={Inbox} title="No messages yet">
+        Messages from the contact page show up here.
+      </EmptyState>
+    );
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-bone-400">
+          <span className="font-semibold text-bone-50">{data.length}</span> {data.length === 1 ? "message" : "messages"}
+        </p>
+        <CsvButton
+          onClick={() =>
+            downloadCsv("messages", data, [
+              ["When", (m) => isoTime(m.created_at)],
+              ["Topic", (m) => m.topic],
+              ["Name", (m) => m.name],
+              ["Email", (m) => m.email],
+              ["Message", (m) => m.message],
+            ])
+          }
+        />
+      </div>
       {data.map((m, i) => (
         <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 12) * 0.04 }} className="panel p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">

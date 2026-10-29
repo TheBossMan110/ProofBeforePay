@@ -184,6 +184,21 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main className="min-h-[100svh] lg:pl-[264px]">
         <div className="mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-8 sm:py-10">
+          {user.demo && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sand-300/25 bg-sand-300/[0.06] px-4 py-3 text-sm text-sand-100"
+            >
+              <span>
+                <span className="font-semibold">You&apos;re in the shared demo account.</span> Checks you run here are visible to other judges, and
+                the account can&apos;t be changed.
+              </span>
+              <Link href="/signup" onClick={() => void signOut()} className="text-xs font-semibold whitespace-nowrap text-bone-50 underline-offset-4 hover:underline">
+                Create your own account
+              </Link>
+            </motion.div>
+          )}
           {forbidden ? (
             <div className="grid min-h-[60svh] place-items-center text-center">
               <div>

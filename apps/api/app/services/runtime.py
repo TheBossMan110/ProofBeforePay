@@ -16,6 +16,7 @@ from ..repositories.run_store import RunStore
 from ..repositories.user_repo import UserRepo
 from ..tools.tavily_search import WebResearch
 from .admin_service import AdminService
+from .assistant_service import AssistantService
 from .auth_service import AuthService
 from .email_service import EmailService
 from .investigation_service import InvestigationService
@@ -30,6 +31,8 @@ def _limits() -> dict[str, SlidingWindow]:
         "email": SlidingWindow(8, 900),
         "contact": SlidingWindow(5, 3600),
         "feedback": SlidingWindow(30, 3600),
+        "ask": SlidingWindow(30, 3600),
+        "transcribe": SlidingWindow(10, 3600),
     }
 
 
@@ -47,6 +50,7 @@ class Runtime:
     investigations: InvestigationService
     auth: AuthService
     admin: AdminService
+    assistant: AssistantService
     limits: dict[str, SlidingWindow] = field(default_factory=_limits)
 
 
@@ -82,6 +86,7 @@ def build(
         investigations=investigations,
         auth=AuthService(users, runs, feedback, email, config),
         admin=AdminService(config, llm, db, runs, users, feedback, email, budget, store),
+        assistant=AssistantService(config, llm, budget, runs, store),
     )
 
 

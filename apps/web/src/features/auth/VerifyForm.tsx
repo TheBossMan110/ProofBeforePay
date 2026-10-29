@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Spinner } from "@/components/ui";
 import { FormAlert, OtpInput } from "@/components/ui/form";
+import { useHealth } from "@/hooks/useBackend";
 import { ApiError, auth } from "@/lib/api-client";
 import { setUser } from "@/stores/session";
 import { AuthHeading, safeNext, stagger } from "./shared";
@@ -18,6 +19,7 @@ export function VerifyForm() {
   const router = useRouter();
   const params = useSearchParams();
   const email = (params.get("email") ?? "").trim().toLowerCase();
+  const testMode = useHealth()?.email_test_mode;
   const next = safeNext(params.get("next"));
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -109,6 +111,15 @@ export function VerifyForm() {
             </motion.div>
             <FormAlert message={error} />
             <FormAlert message={note} tone="info" />
+            {testMode && (
+              <p className="rounded-xl border border-caution-400/20 bg-caution-400/[0.06] px-4 py-3 text-xs leading-relaxed text-caution-200">
+                Email here is in test mode, so your code may go to the site owner&apos;s inbox instead of yours. To look around now, use a{" "}
+                <Link href="/login" className="font-semibold underline underline-offset-2 hover:text-bone-50">
+                  demo account
+                </Link>
+                .
+              </p>
+            )}
             <motion.button
               {...stagger(2)}
               type="submit"

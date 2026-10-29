@@ -6,7 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from ...models.user import User
-from ...schemas.auth import CodeRequest, EmailBody, LoginRequest, ResendRequest, ResetRequest, SignupRequest
+from ...schemas.auth import CodeRequest, DemoRequest, EmailBody, LoginRequest, ResendRequest, ResetRequest, SignupRequest
 from ...services import runtime
 from ...services.auth_service import AuthError
 from ...services.email_service import EmailError
@@ -63,6 +63,17 @@ async def login(body: LoginRequest, request: Request, response: Response) -> dic
     try:
         user = await runtime.current.auth.login(body.email, body.password)
     except (AuthError, EmailError) as exc:
+        raise _fail(exc) from exc
+    return await _signed_in(user, request, response)
+
+
+@router.post("/demo")
+async def demo(body: DemoRequest, request: Request, response: Response) -> dict[str, Any]:
+    """One-click sign-in to a shared demo account, so judges can try the signed-in app without an email code."""
+    limit(request, "login")
+    try:
+        user = await runtime.current.auth.demo_user(body.kind)
+    except AuthError as exc:
         raise _fail(exc) from exc
     return await _signed_in(user, request, response)
 

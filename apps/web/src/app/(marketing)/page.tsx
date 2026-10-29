@@ -3,6 +3,7 @@ import { Examples } from "@/components/marketing/Examples";
 import { FinalCta } from "@/components/marketing/FinalCta";
 import { Hero } from "@/components/marketing/Hero";
 import { HowItWorks } from "@/components/marketing/HowItWorks";
+import { LiveStats } from "@/components/marketing/LiveStats";
 import { Outcomes } from "@/components/marketing/Outcomes";
 import { Principles } from "@/components/marketing/Principles";
 import { RoutingSection } from "@/components/marketing/RoutingSection";
@@ -14,6 +15,7 @@ export default function Home() {
     <>
       <Hero />
       <CatchMarquee />
+      <LiveStats />
       <TrySection />
       <StatSection />
       <HowItWorks />

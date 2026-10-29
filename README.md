@@ -9,18 +9,28 @@ Paste a job offer, a recruiter's message or a client's email. Seven AI agents ch
 [![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Nemotron%203-76b900?logo=nvidia&logoColor=white)](https://www.nvidia.com/en-us/ai-data-science/foundation-models/nemotron/)
 [![Nebius Token Factory](https://img.shields.io/badge/Nebius-Token%20Factory-1f1f1f)](https://nebius.com/token-factory)
 [![Tavily](https://img.shields.io/badge/Tavily-search%20%C2%B7%20crawl%20%C2%B7%20extract-1f1f1f)](https://tavily.com)
-[![Tests](https://img.shields.io/badge/tests-47%20passing-76b900)](apps/api/tests)
+[![Tests](https://img.shields.io/badge/tests-57%20passing-76b900)](apps/api/tests)
 [![License: MIT](https://img.shields.io/badge/License-MIT-76b900.svg)](LICENSE)
 
 Built for the **Nebius × NVIDIA Global AI Hackathon** · Best Apps and Agents
 
-**Live demo:** _added after deploy_ · **Video:** _added after upload_ · **Docs:** [architecture](docs/architecture.md) · [how it decides](docs/risk-methodology.md) · [threat model](docs/threat-model.md)
+**Live demo:** [proofbeforepay-qaax.onrender.com](https://proofbeforepay-qaax.onrender.com) · **Video:** _added after upload_ · **Docs:** [architecture](docs/architecture.md) · [how it decides](docs/risk-methodology.md) · [threat model](docs/threat-model.md)
 
 <img src="docs/images/home.jpg" alt="The ProofBeforePay home page: a pasted recruiter message being scanned, with risk signals and a Stop stamp" width="100%" />
 
 </div>
 
 ---
+
+## For judges: try it in one click
+
+Open the [live demo](https://proofbeforepay-qaax.onrender.com) (it may take a minute to wake up), then:
+
+- **No account:** pick a sample on the home page and press *Investigate*, or open a recorded example.
+- **Signed-in app:** on [Sign in](https://proofbeforepay-qaax.onrender.com/login), press **Demo account** for the dashboard, agent pipeline, history and compare.
+- **Admin dashboard:** press **Demo admin** for live system health, budget, users, feedback and messages. Real people's names and emails are masked in this view.
+
+You can also sign in by hand: `demo.judge@example.com` or `demo.admin@example.com`, password `ProofBeforePay-Demo-2026`. Both demo accounts are shared and can't be renamed, deleted or reset.
 
 ## Contents
 
@@ -59,7 +69,9 @@ Most of these scams are checkable. The "recruiter" writes from a domain register
 - **We try to prove ourselves wrong.** Nemotron Super runs its own searches against every verdict, audits each finding against its sources, and lists exactly what evidence would change the answer.
 - **Links checked for you.** Every link in the message is opened through Tavily, never by your browser or our server, to see whether the page borrows the company's name or asks for a payment, a password or ID.
 - **What to do next.** What not to do yet, questions to ask the sender, and a polite reply that asks them to prove who they are.
-- **Share, replay, download.** Every check gets a link, replays step by step, and downloads as Markdown.
+- **Paste a screenshot.** Upload, paste or drop a screenshot of the chat or email. A small vision model copies out the text, you check it, and Nemotron does the rest.
+- **Ask the report.** Follow-up questions like "Is the pay realistic?" are answered by Nemotron Super from that report's evidence only, with citations you can click.
+- **Share, replay, download.** Every check gets a link, replays step by step, and downloads as Markdown or saves as a PDF. The browser tab shows the progress, so you can switch away while it works.
 
 **With a free account**
 
@@ -70,7 +82,8 @@ Most of these scams are checkable. The "recruiter" writes from a domain register
 
 **For the team running it**
 
-- **Admin dashboard.** Live health of the API, Token Factory, Tavily, Supabase and Resend; the model budget; usage, verdict and challenge charts; every user (name, email, verified, checks run); all feedback ratings and contact messages.
+- **Admin dashboard.** Live health of the API, Token Factory, Tavily, Supabase and Resend; the model budget; usage, verdict and challenge charts; every user (name, email, verified, checks run); all feedback ratings and contact messages. Every table downloads as CSV.
+- **Installable.** Add it to your phone's home screen and it opens like an app.
 
 ## Screenshots
 
@@ -273,7 +286,7 @@ Create a project, then run [`apps/api/migrations/0001_init.sql`](apps/api/migrat
 
 ### Email
 
-In Resend, create an API key and verify a domain you own, then set `EMAIL_FROM` to an address on it (for example `ProofBeforePay <hello@yourdomain.com>`). Until a domain is verified, Resend only delivers to your own account email.
+In Resend, create an API key and verify a domain you own, then set `EMAIL_FROM` to an address on it (for example `ProofBeforePay <hello@yourdomain.com>`). Until a domain is verified, Resend only delivers to your own account email. For a demo without a domain, set `EMAIL_TEST_INBOX` to that email: codes Resend won't deliver go there instead, labelled with who they're for, and the verify page tells people to use a demo account.
 
 ## Configuration
 
@@ -286,12 +299,15 @@ All settings are environment variables in `.env` (see [`.env.example`](.env.exam
 | `SUPABASE_URL`, `SUPABASE_SECRET_KEY` | For accounts in production | Postgres for accounts, saved checks, feedback, messages and the spend ledger |
 | `RESEND_API_KEY`, `EMAIL_FROM` | For sign-up in production | Sends one-time codes |
 | `ADMIN_EMAILS` | For the admin page | Comma-separated emails that can open `/admin` after signing up |
+| `EMAIL_TEST_INBOX` | Optional | Without a verified domain, codes go to this inbox instead |
+| `DEMO_LOGIN`, `DEMO_JUDGE_EMAIL`, `DEMO_ADMIN_EMAIL` | Optional | The one-click demo accounts (on by default) |
 | `PUBLIC_URL` | Recommended | The site's address, used in emails |
 | `AUTH_SECRET` | In production | Signs one-time codes; any long random value |
 | `APP_ENV` | In production | Set to `production` so codes are never written to the log |
 | `MAX_SPEND_USD` | Optional | Hard ceiling on model spend (default $1); live checks pause near it |
 | `RUNS_PER_IP_PER_HOUR`, `MAX_RUNS_PER_DAY`, `MAX_CONCURRENT_RUNS` | Optional | Public-demo limits |
 | `MODEL_ULTRA`, `MODEL_SUPER`, `MODEL_NANO`, `PRICE_*` | Optional | Model IDs and per-million-token prices for the cost telemetry |
+| `MODEL_VISION`, `PRICE_VISION_IN`, `PRICE_VISION_OUT` | Optional | The model that reads screenshots, and its prices |
 
 To ship a finished run as a replayable example on the home page: `python scripts/seed_demo.py <run_id> <slug>`.
 
@@ -307,7 +323,10 @@ Everything lives under `/api/v1`. The contract is exported to [`packages/shared-
 | `GET` | `/investigations/{id}/events` | Server-Sent Events; `?replay=5` replays at 5× speed, `?replay=0` sends it all at once |
 | `GET` | `/investigations/{id}/claims` · `/evidence` · `/report` | The evidence trail and the report as separate resources |
 | `GET` | `/examples` | Recorded example investigations |
-| `POST` | `/auth/signup` · `/verify` · `/resend` · `/login` · `/forgot` · `/reset` · `/logout` | Accounts and one-time codes |
+| `POST` | `/investigations/{id}/ask` | A question about a finished report: `{ "question" }` → `{ "answer" }` with citations |
+| `POST` | `/transcribe` | Reads the message out of a screenshot: `{ "image": dataURL }` → `{ "text", "model" }` |
+| `GET` | `/stats` | Anonymous totals for the home page: checks run, average time, cost and savings |
+| `POST` | `/auth/signup` · `/verify` · `/resend` · `/login` · `/forgot` · `/reset` · `/logout` · `/demo` | Accounts, one-time codes and the demo sign-in |
 | `GET` | `/auth/me` | The signed-in user, or `null` |
 | `GET` · `PATCH` · `DELETE` | `/me/investigations` · `/me` | Your checks; rename yourself; delete your account and its data |
 | `POST` | `/feedback` · `/contact` | A rating on a report; the contact form |
@@ -357,7 +376,7 @@ cd apps/api
 .venv/Scripts/python -m pytest        # macOS/Linux: .venv/bin/python -m pytest
 ```
 
-47 tests cover the full seven-step pipeline, the guardrails, the challenge rules, the hard signals, the API, the spending ceiling, and the account flows: sign-up and email codes, running out of attempts, unverified sign-in, password reset signing out other sessions, ownership of checks, admin-only access, feedback, contact and account deletion. They use fake models, a fake web and an in-memory database, so they run offline in a few seconds and cost nothing.
+57 tests cover the full seven-step pipeline, the guardrails, the challenge rules, the hard signals, the API, the spending ceiling, and the account flows: sign-up and email codes, running out of attempts, unverified sign-in, password reset signing out other sessions, ownership of checks, admin-only access, feedback, contact, account deletion, the demo accounts, asking a report, screenshot checks and email test mode. They use fake models, a fake web and an in-memory database, so they run offline in a few seconds and cost nothing.
 
 ## Feedback on the tools
 
