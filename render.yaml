@@ -32,4 +32,4 @@ services:
       - key: MAX_SPEND_USD
         value: "5.00"
       - key: NEXT_PUBLIC_REPO_URL
-        value: ""
+        value: "https://github.com/TheBossMan110/ProofBeforePay"

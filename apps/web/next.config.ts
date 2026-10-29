@@ -9,6 +9,7 @@ const config: NextConfig = {
   reactStrictMode: true,
   images: { unoptimized: true },
   poweredByHeader: false,
+  devIndicators: false,
   // Server-sent events must not be gzipped by the dev proxy, or they arrive in one lump at the end.
   compress: false,
   ...(production
