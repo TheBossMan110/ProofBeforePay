@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: proofbeforepay
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NEBIUS_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: APP_ENV
+        value: production
+      - key: RUNS_PER_IP_PER_HOUR
+        value: "3"
+      - key: MAX_RUNS_PER_DAY
+        value: "60"
+      - key: MAX_SPEND_USD
+        value: "5.00"
+      - key: NEXT_PUBLIC_REPO_URL
+        value: ""

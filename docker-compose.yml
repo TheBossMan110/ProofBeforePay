@@ -1,0 +1,12 @@
+# One container: the FastAPI service plus the exported Next.js site, exactly as it runs in production.
+#   docker compose up --build    →  http://localhost:8000
+services:
+  proofbeforepay:
+    build: .
+    env_file: .env
+    environment:
+      APP_ENV: development  # codes go to the log if RESEND_API_KEY is empty; remove for production-like behaviour
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api/data:/app/apps/api/data
