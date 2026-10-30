@@ -14,7 +14,7 @@ Paste a job offer, a recruiter's message or a client's email. Seven AI agents ch
 
 Built for the **Nebius × NVIDIA Global AI Hackathon** · Best Apps and Agents
 
-**Live demo:** [proofbeforepay-qaax.onrender.com](https://proofbeforepay-qaax.onrender.com) · **Video:** _added after upload_ · **Docs:** [architecture](docs/architecture.md) · [how it decides](docs/risk-methodology.md) · [threat model](docs/threat-model.md)
+**Live demo:** [proofbeforepay-qaax.onrender.com](https://proofbeforepay-qaax.onrender.com) · **Video:**(https://youtu.be/JhhcloY57W4) · **Docs:** [architecture](docs/architecture.md) · [how it decides](docs/risk-methodology.md) · [threat model](docs/threat-model.md)
 
 <img src="docs/images/home.jpg" alt="The ProofBeforePay home page: a pasted recruiter message being scanned, with risk signals and a Stop stamp" width="100%" />
 
