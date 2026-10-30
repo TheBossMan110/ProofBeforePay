@@ -9,7 +9,7 @@ Paste a job offer, a recruiter's message or a client's email. Seven AI agents ch
 [![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Nemotron%203-76b900?logo=nvidia&logoColor=white)](https://www.nvidia.com/en-us/ai-data-science/foundation-models/nemotron/)
 [![Nebius Token Factory](https://img.shields.io/badge/Nebius-Token%20Factory-1f1f1f)](https://nebius.com/token-factory)
 [![Tavily](https://img.shields.io/badge/Tavily-search%20%C2%B7%20crawl%20%C2%B7%20extract-1f1f1f)](https://tavily.com)
-[![Tests](https://img.shields.io/badge/tests-57%20passing-76b900)](apps/api/tests)
+[![Tests](https://img.shields.io/badge/tests-58%20passing-76b900)](apps/api/tests)
 [![License: MIT](https://img.shields.io/badge/License-MIT-76b900.svg)](LICENSE)
 
 Built for the **Nebius × NVIDIA Global AI Hackathon** · Best Apps and Agents
@@ -376,7 +376,7 @@ cd apps/api
 .venv/Scripts/python -m pytest        # macOS/Linux: .venv/bin/python -m pytest
 ```
 
-57 tests cover the full seven-step pipeline, the guardrails, the challenge rules, the hard signals, the API, the spending ceiling, and the account flows: sign-up and email codes, running out of attempts, unverified sign-in, password reset signing out other sessions, ownership of checks, admin-only access, feedback, contact, account deletion, the demo accounts, asking a report, screenshot checks and email test mode. They use fake models, a fake web and an in-memory database, so they run offline in a few seconds and cost nothing.
+58 tests cover the full seven-step pipeline, the guardrails, the challenge rules, the hard signals, the API, the spending ceiling, and the account flows: sign-up and email codes, running out of attempts, unverified sign-in, password reset signing out other sessions, ownership of checks, admin-only access, feedback, contact, account deletion, the demo accounts, asking a report, screenshot checks and email test mode. They use fake models, a fake web and an in-memory database, so they run offline in a few seconds and cost nothing.
 
 ## Feedback on the tools
 

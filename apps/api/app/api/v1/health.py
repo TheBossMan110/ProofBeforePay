@@ -10,7 +10,7 @@ from ...services import runtime
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health")
+@router.api_route("/health", methods=["GET", "HEAD"])  # uptime monitors check with HEAD
 async def health() -> dict[str, Any]:
     rt = runtime.current
     return {

@@ -76,3 +76,8 @@ def test_evidence_and_report_endpoints(client: TestClient) -> None:
     assert claims and all(c["status"] in ("verified", "contradicted", "inconclusive") for c in claims)
     assert {e["relation"] for e in evidence["evidence"]} <= {"supports", "contradicts", "context"}
     assert report["judgement"]["decision"] in ("PROCEED", "VERIFY_FIRST", "STOP")
+
+
+def test_health_answers_uptime_monitors(client: TestClient) -> None:
+    # UptimeRobot and similar services check with HEAD, not GET.
+    assert client.head("/api/v1/health").status_code == 200
